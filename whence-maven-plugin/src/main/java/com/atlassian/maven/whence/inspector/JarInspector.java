@@ -77,7 +77,6 @@ class JarInspector {
         synchronized (this) {
             bndBuilder.setJar(jar);
             bndBuilder.setClasspath(classpath);
-            //bndBuilder.setBase(getBase(project));
         }
         return bndBuilder;
     }
