@@ -13,10 +13,19 @@
     <artifactId>whence-parent</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+
     <modules>
         <module>whence-test</module>
         <module>whence-maven-plugin</module>
     </modules>
+
+    <scm>
+        <connection>scm:git:git@bitbucket.org:atlassian/whence-maven-plugin.git</connection>
+        <developerConnection>scm:git:git@bitbucket.org:atlassian/whence-maven-plugin.git</developerConnection>
+        <url>https://bitbucket.org/atlassian/whence-maven-plugin</url>
+        <tag>HEAD</tag>
+    </scm>
+
 
     <build>
         <plugins>
