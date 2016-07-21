@@ -4,6 +4,7 @@ import aQute.bnd.header.Parameters;
 import aQute.bnd.osgi.Builder;
 import aQute.bnd.osgi.Jar;
 import com.atlassian.maven.whence.data.PackageInfo;
+import com.atlassian.maven.whence.reporting.Reporter;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.apache.maven.shared.dependency.graph.traversal.CollectingDependencyNodeVisitor;
@@ -12,29 +13,38 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
+import static java.util.Optional.ofNullable;
+
 class JarInspector {
 
-    PackageInfo inspect(DependencyNode depGraph, ArtifactResolution artifactResolution) {
+    PackageInfo inspect(DependencyNode depGraph, ArtifactResolution artifactResolution, Reporter.ReportDetail reportDetail) {
         Artifact artifact = artifactResolution.resolveArtifact(depGraph.getArtifact());
         Jar[] classPath = buildClassPath(depGraph, artifactResolution);
         Jar jar = makeJar(artifact);
 
-        Builder bndBuilder = makeBndBuilder(jar, classPath);
+        PackageInfo.Builder builder = PackageInfo.builder(artifact);
         try {
-            bndBuilder.analyze();
-
             Manifest manifest = jar.getManifest();
+            if (reportDetail == Reporter.ReportDetail.EXPORTS) {
+                // no need to do a BND analyze for exports/imports
+                return builder
+                        .setImports(readImports(manifest))
+                        .setExports(readExports(manifest))
+                        .build();
+            } else {
+                Builder bndBuilder = makeBndBuilder(jar, classPath);
+                bndBuilder.analyze();
 
-            return PackageInfo.builder(artifact)
-                    .setContains(bndBuilder.getContained())
-                    .setReferences(bndBuilder.getReferred())
-                    .setImports(readImports(manifest))
-                    .setExports(readExports(manifest))
-                    .build();
+                return builder
+                        .setContains(bndBuilder.getContained())
+                        .setReferences(bndBuilder.getReferred())
+                        .setImports(readImports(manifest))
+                        .setExports(readExports(manifest))
+                        .build();
+            }
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -56,8 +66,10 @@ class JarInspector {
     }
 
     private Optional<String> readManifest(Manifest manifest, String name) {
-        Attributes mainAttributes = manifest.getMainAttributes();
-        return Optional.ofNullable(mainAttributes.getValue(name));
+        return ofNullable(manifest)
+                .map(Manifest::getMainAttributes)
+                .map(attributes -> ofNullable(attributes.getValue(name)))
+                .flatMap(opString -> opString);
     }
 
     private Jar[] buildClassPath(DependencyNode depGraph, ArtifactResolution artifactResolution) {

@@ -1,5 +1,6 @@
 package com.atlassian.maven.whence.reporting;
 
+import aQute.bnd.header.Attrs;
 import aQute.bnd.header.Parameters;
 import aQute.bnd.osgi.Descriptors;
 import aQute.bnd.osgi.Packages;
@@ -9,6 +10,7 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.apache.maven.shared.dependency.graph.traversal.DependencyNodeVisitor;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -76,15 +78,13 @@ class ReportingAsTreeVisitor
 
         PackageInfo info = packageMapper.getPackageInfoFor(node.getArtifact());
 
-        if (node.getParent() != null) {
-            printPackages(fillIndent, info.getExports(), "exports");
+        printParameters(fillIndent, info.getExports(), "exports");
 
-            if (reportDetail == Reporter.ReportDetail.ALL) {
-                printPackages(fillIndent, info.getImports(), "imports");
+        if (reportDetail == Reporter.ReportDetail.ALL) {
+            printParameters(fillIndent, info.getImports(), "imports");
 
-                printPackages(fillIndent, info.getContains(), "contains");
-                printPackages(fillIndent, info.getReferences(), "references");
-            }
+            printPackages(fillIndent, info.getContains(), "contains");
+            printPackages(fillIndent, info.getReferences(), "references");
         }
 
 
@@ -101,9 +101,27 @@ class ReportingAsTreeVisitor
                         .collect(Collectors.toList()));
     }
 
-    private void printPackages(String fillIndent, Parameters packages, final String packageType) {
-        Set<String> packagesOf = packages.keySet();
-        printPackageLines(fillIndent, packageType, packagesOf);
+    private void printParameters(String fillIndent, Parameters packages, final String packageType) {
+        // we have multiple line of output
+        List<String> output = new ArrayList<>();
+        for (String packageName : packages.keySet()) {
+            output.add(packageName);
+            Attrs attrs = ParameterAccess.attrs(packages, packageName);
+            for (String key : attrs.keySet()) {
+                if (key.equals("uses:")) {
+                    String value = attrs.get(key);
+                    output.add(String.format("\t%s=", key));
+                    String[] split = value.split(",");
+                    for (String splitPackage : split) {
+                        output.add(String.format("\t\t%s", splitPackage));
+                    }
+
+                } else {
+                    output.add(String.format("\t%s=%s", key, attrs.get(key)));
+                }
+            }
+        }
+        printPackageLines(fillIndent, packageType, output);
     }
 
     private void printPackageLines(String fillIndent, String packageType, Collection<String> packagesOf) {

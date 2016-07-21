@@ -1,5 +1,6 @@
 package com.atlassian.maven.whence.reporting;
 
+import aQute.bnd.header.Attrs;
 import aQute.bnd.header.Parameters;
 import aQute.bnd.osgi.Descriptors;
 import aQute.bnd.osgi.Packages;
@@ -33,17 +34,14 @@ class ReportingAsFlatVisitor
         PackageInfo info = packageMapper.getPackageInfoFor(node.getArtifact());
 
         String gav = gav(node.getArtifact());
-        if (node.getParent() != null) {
-            printPackages(gav, info.getExports(), "exports");
 
-            if (reportDetail == Reporter.ReportDetail.ALL) {
-                printPackages(gav, info.getImports(), "imports");
+        printParameters(gav, info.getExports(), "exports");
 
-                printPackages(gav, info.getContains(), "contains");
-                printPackages(gav, info.getReferences(), "references");
-            }
-        } else {
-            log.info(format("%s", gav));
+        if (reportDetail == Reporter.ReportDetail.ALL) {
+            printParameters(gav, info.getImports(), "imports");
+
+            printPackages(gav, info.getContains(), "contains");
+            printPackages(gav, info.getReferences(), "references");
         }
         return true;
     }
@@ -56,9 +54,27 @@ class ReportingAsFlatVisitor
         printPackageLines(gav, packageType, list);
     }
 
-    private void printPackages(String gav, Parameters packages, final String packageType) {
-        Collection<String> packagesOf = sort(packages.keySet().stream().collect(Collectors.toList()));
-        printPackageLines(gav, packageType, packagesOf);
+    private void printParameters(String gav, Parameters packages, final String packageType) {
+        Collection<String> output = sort(packages.keySet().stream()
+                .map(packageName -> buildFlatAttrs(packages, packageName))
+                .collect(Collectors.toList()));
+        printPackageLines(gav, packageType, output);
+    }
+
+    private String buildFlatAttrs(Parameters packages, String packageName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(packageName);
+        sb.append(" ");
+        Attrs attrs = ParameterAccess.attrs(packages, packageName);
+        int count = 0;
+        for (String key : attrs.keySet()) {
+            if (count > 0) {
+                sb.append(";");
+            }
+            sb.append(key).append("=").append(attrs.get(key));
+            count++;
+        }
+        return sb.toString();
     }
 
     private void printPackageLines(String gav, String packageType, Collection<String> packagesOf) {

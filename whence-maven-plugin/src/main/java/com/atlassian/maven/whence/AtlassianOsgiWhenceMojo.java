@@ -9,6 +9,7 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -53,33 +54,32 @@ public class AtlassianOsgiWhenceMojo extends AbstractMojo {
     private DependencyGraphBuilder dependencyGraphBuilder;
 
     public void execute() throws MojoExecutionException, MojoFailureException {
+        Log log = getLog();
 
-        ProfilerSupport.waitForProfiler(getLog(), 30000);
+        ProfilerSupport.waitForProfiler(log, 30000);
 
-        getLog().info("Starting " + OUR_NAME + "...");
+        log.info("Starting " + OUR_NAME + "...");
         long then = System.currentTimeMillis();
 
         Reporter.ReportStyle reportStyle = toStyle(style);
         Reporter.ReportDetail reportDetail = toDetail(detail);
 
-        getLog().info("");
-        getLog().info("Starting artifact resolution...");
-        ArtifactResolution artifactResolution = new ArtifactResolution(project.getArtifacts());
-        getLog().info(format("\tArtifact resolution ran in %d ms.", timeSince(then)));
+        Artifact rootArtifact = project.getArtifact();
 
+        ArtifactResolution artifactResolution = new ArtifactResolution(rootArtifact, outputDirectory, project.getArtifacts());
         DependencyNode graph = getDependencyGraph(project, artifactResolution);
-        getLog().info("");
-        getLog().info("\tInspecting bytecode....");
-        PackageMapper mappings = new InspectingVisitor().inspect(graph, artifactResolution);
-        getLog().info(format("\tByte code inspection ran in %d ms.", timeSince(then)));
+        log.info("");
+        log.info("\tInspecting bytecode....");
+        PackageMapper mappings = new InspectingVisitor().inspect(graph, artifactResolution, reportDetail, log);
+        log.info(format("\tByte code inspection ran in %d ms.", timeSince(then)));
 
-        getLog().info("");
+        log.info("");
         new Reporter()
-                .report(getLog(), reportStyle, reportDetail, graph, mappings);
+                .report(log, reportStyle, reportDetail, graph, mappings);
 
         long ms = timeSince(then);
-        getLog().info("");
-        getLog().info(format("\tFull analysis ran in %d ms.", ms));
+        log.info("");
+        log.info(format("\tFull analysis ran in %d ms.", ms));
     }
 
 
