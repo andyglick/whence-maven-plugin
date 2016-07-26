@@ -16,7 +16,7 @@ By default it only shows exports but you can make it specify all package informa
 `-Ddetail=[ exports | all ]`
 
 * the default is `exports`
-* `all` will show imports, exports, contain and referenced packages
+* `all` will show imports, exports, contained and referenced packages
 
 `-verbose=[ true | false ]`
 
