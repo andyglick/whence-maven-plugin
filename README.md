@@ -8,13 +8,24 @@ By default it only shows exports but you can make it specify all package informa
 
 # Parameters
 
-* -Dtype=[ tree | flat ]
-* -Ddetail=[ exports | all ]
+`-Dtype=[ tree | flat ]`
+
+* the default is `tree` which humans can read better
+* use `flat` if you want to grep for packages
+
+`-Ddetail=[ exports | all ]`
+
+* the default is `exports`
+* `all` will show imports, exports, contain and referenced packages
+
+`-verbose=[ true | false ]`
+
+* the default is `false`
 
 
 # Tree Mode
 
-mvn com.atlassian.maven:whence-maven-plugin:whence -Ddetail=all -Dstyle=tree
+    mvn com.atlassian.maven:whence:whence -Ddetail=all -Dstyle=tree
 
 produces output like :
 
@@ -58,7 +69,7 @@ produces output like :
 
 # Flat Mode
 
-mvn com.atlassian.maven:whence-maven-plugin:whence -Ddetail=all -Dstyle=flat
+    mvn com.atlassian.maven:whence:whence -Ddetail=all -Dstyle=flat
 
 produces output like :
 
