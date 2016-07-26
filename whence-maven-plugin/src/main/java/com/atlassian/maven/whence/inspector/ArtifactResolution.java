@@ -24,11 +24,15 @@ public class ArtifactResolution {
         this.resolvedArtifacts = resolvedArtifacts;
     }
 
-    public Artifact resolveArtifact(Artifact artifact) {
+    public Optional<Artifact> resolveProjectArtifact(Artifact artifact) {
         if (ArtifactKey.artifactEquals(rootArtifact, artifact)) {
-            return rootArtifact;
+            return Optional.of(rootArtifact);
         }
-        Optional<Artifact> any = resolvedArtifacts.stream().filter(a -> ArtifactKey.artifactEquals(a, artifact)).findAny();
+        return resolvedArtifacts.stream().filter(a -> ArtifactKey.artifactEquals(a, artifact)).findAny();
+    }
+
+    Artifact resolveArtifact(Artifact artifact) {
+        Optional<Artifact> any = resolveProjectArtifact(artifact);
         if (!any.isPresent()) {
             throw new IllegalStateException("Unable to resolve artifact :" + artifact);
         }

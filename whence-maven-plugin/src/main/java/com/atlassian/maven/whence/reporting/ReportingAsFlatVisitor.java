@@ -4,33 +4,30 @@ import aQute.bnd.header.Attrs;
 import aQute.bnd.header.Parameters;
 import aQute.bnd.osgi.Descriptors;
 import aQute.bnd.osgi.Packages;
+import com.atlassian.maven.whence.MvnLog;
 import com.atlassian.maven.whence.data.PackageInfo;
 import com.atlassian.maven.whence.data.PackageMapper;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
-import org.apache.maven.shared.dependency.graph.traversal.DependencyNodeVisitor;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
 class ReportingAsFlatVisitor
-        implements DependencyNodeVisitor {
-    private final Log log;
+        extends ReportingVisitor {
     private final Reporter.ReportDetail reportDetail;
     private final PackageMapper packageMapper;
 
-    ReportingAsFlatVisitor(Log log, PackageMapper packageMapper, Reporter.ReportDetail reportDetail) {
-        this.log = log;
+    ReportingAsFlatVisitor(MvnLog log, PackageMapper packageMapper, Reporter.ReportDetail reportDetail) {
+        super(log);
         this.reportDetail = reportDetail;
         this.packageMapper = packageMapper;
     }
 
-    public boolean visit(DependencyNode node) {
+    @Override
+    boolean onNode(DependencyNode node) {
         PackageInfo info = packageMapper.getPackageInfoFor(node.getArtifact());
 
         String gav = gav(node.getArtifact());
@@ -47,17 +44,20 @@ class ReportingAsFlatVisitor
     }
 
     private void printPackages(String gav, Packages packages, final String packageType) {
-
-        List<String> list = sort(packages.keySet().stream()
+        Collection<String> packageNames = sort(packages.keySet()
+                .stream()
                 .map(Descriptors.PackageRef::getFQN)
-                .collect(Collectors.toList()));
-        printPackageLines(gav, packageType, list);
+                .collect(Collectors.toList())
+        );
+        printPackageLines(gav, packageType, packageNames);
     }
 
     private void printParameters(String gav, Parameters packages, final String packageType) {
-        Collection<String> output = sort(packages.keySet().stream()
+        Collection<String> output = sort(packages.keySet()
+                .stream()
                 .map(packageName -> buildFlatAttrs(packages, packageName))
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList())
+        );
         printPackageLines(gav, packageType, output);
     }
 
@@ -90,15 +90,6 @@ class ReportingAsFlatVisitor
 
     private String gav(Artifact artifact) {
         return artifact.toString();
-    }
-
-    private List<String> sort(List<String> list) {
-        Collections.sort(list);
-        return list;
-    }
-
-    public boolean endVisit(DependencyNode node) {
-        return true;
     }
 
 }

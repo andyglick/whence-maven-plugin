@@ -11,6 +11,7 @@ import org.apache.maven.shared.dependency.graph.traversal.CollectingDependencyNo
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
 import java.util.jar.Manifest;
@@ -97,7 +98,18 @@ class JarInspector {
     private Jar makeJar(Artifact artifact) {
         File file = getFile(artifact);
         try {
+            if (!file.exists()) {
+                mkdirMinusP(file);
+            }
             return new Jar(artifact.getArtifactId(), file);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void mkdirMinusP(File file) {
+        try {
+            Files.createDirectories(file.toPath());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

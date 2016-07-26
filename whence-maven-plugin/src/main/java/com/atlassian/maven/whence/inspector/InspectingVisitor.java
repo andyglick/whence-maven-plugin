@@ -1,19 +1,21 @@
 package com.atlassian.maven.whence.inspector;
 
+import com.atlassian.maven.whence.MvnLog;
 import com.atlassian.maven.whence.data.PackageInfo;
 import com.atlassian.maven.whence.data.PackageMapper;
 import com.atlassian.maven.whence.reporting.Reporter;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.apache.maven.shared.dependency.graph.traversal.DependencyNodeVisitor;
+
+import static java.lang.String.format;
 
 public class InspectingVisitor {
 
     private PackageMapper.Builder packageMapperBuilder = PackageMapper.builder();
     private JarInspector jarInspector = new JarInspector();
 
-    public PackageMapper inspect(DependencyNode rootNode, ArtifactResolution artifactResolution, Reporter.ReportDetail reportDetail, Log log) {
+    public PackageMapper inspect(DependencyNode rootNode, ArtifactResolution artifactResolution, Reporter.ReportDetail reportDetail, MvnLog log) {
 
         DependencyNodeVisitor visitor = new DependencyNodeVisitor() {
             @Override
@@ -33,13 +35,14 @@ public class InspectingVisitor {
         return packageMapperBuilder.build();
     }
 
-    private void inspectNode(DependencyNode node, ArtifactResolution artifactResolution, Reporter.ReportDetail reportDetail, Log log) {
+    private void inspectNode(DependencyNode node, ArtifactResolution artifactResolution, Reporter.ReportDetail reportDetail, MvnLog log) {
         long then = now();
         Artifact artifact = artifactResolution.resolveArtifact(node.getArtifact());
 
+        log.verbose(format("\t\t'%s'...", artifact));
         PackageInfo info = jarInspector.inspect(node, artifactResolution, reportDetail);
+        log.verbose(format("\t\t  (%d ms)", now() - then));
 
-        log.info(String.format("\t\t'%s' (%s ms)", artifact, now() - then));
 
         packageMapperBuilder.addPackage(artifact, info);
     }

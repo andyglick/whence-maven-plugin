@@ -4,16 +4,15 @@ import aQute.bnd.header.Attrs;
 import aQute.bnd.header.Parameters;
 import aQute.bnd.osgi.Descriptors;
 import aQute.bnd.osgi.Packages;
+import com.atlassian.maven.whence.MvnLog;
 import com.atlassian.maven.whence.data.PackageInfo;
 import com.atlassian.maven.whence.data.PackageMapper;
-import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
-import org.apache.maven.shared.dependency.graph.traversal.DependencyNodeVisitor;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -22,7 +21,9 @@ import static java.lang.String.format;
  * Taken from maven dep plugin and its SerializingDependencyNodeVisitor but with better printing output
  */
 class ReportingAsTreeVisitor
-        implements DependencyNodeVisitor {
+        extends ReportingVisitor {
+
+    private static final String PACKAGE_INDENT = "|      ";
 
     /**
      * Provides tokens to use when serializing the dependency graph.
@@ -55,28 +56,29 @@ class ReportingAsTreeVisitor
     private static final GraphTokens STANDARD_TOKENS = new GraphTokens("+- ", "\\- ", "|  ", "   ");
 
 
-    private final Log log;
     private final Reporter.ReportDetail reportDetail;
     private final GraphTokens tokens;
-    private int depth;
     private final PackageMapper packageMapper;
 
-    ReportingAsTreeVisitor(Log log, PackageMapper packageMapper, Reporter.ReportDetail reportDetail) {
-        this.log = log;
+    ReportingAsTreeVisitor(MvnLog log, PackageMapper packageMapper, Reporter.ReportDetail reportDetail) {
+        super(log);
         this.reportDetail = reportDetail;
         this.tokens = STANDARD_TOKENS;
         this.packageMapper = packageMapper;
-
-        depth = 0;
     }
 
-    public boolean visit(DependencyNode node) {
+    @Override
+    boolean onNode(DependencyNode node) {
         String fillIndent = fillIndent(node);
         String nodeIndent = nodeIndent(node);
 
         log.info(format("%s%s%s", fillIndent, nodeIndent, node.toNodeString()));
 
         PackageInfo info = packageMapper.getPackageInfoFor(node.getArtifact());
+        File file = info.getArtifact().getFile();
+
+        log.info(format("%s%s%s", fillIndent, PACKAGE_INDENT,
+                format("%s%s", tab(), file)));
 
         printParameters(fillIndent, info.getExports(), "exports");
 
@@ -86,65 +88,56 @@ class ReportingAsTreeVisitor
             printPackages(fillIndent, info.getContains(), "contains");
             printPackages(fillIndent, info.getReferences(), "references");
         }
-
-
-        depth++;
         return true;
     }
 
     private void printPackages(String fillIndent, Packages packages, final String packageType) {
-        Set<Descriptors.PackageRef> packagesOf = packages.keySet();
+        List<String> packageNames = packages.keySet()
+                .stream()
+                .map(Descriptors.PackageRef::getFQN)
+                .collect(Collectors.toList());
 
-        printPackageLines(fillIndent, packageType,
-                packagesOf.stream()
-                        .map(Descriptors.PackageRef::getFQN)
-                        .collect(Collectors.toList()));
+        printPackageLines(fillIndent, packageType, sort(packageNames));
     }
 
     private void printParameters(String fillIndent, Parameters packages, final String packageType) {
         // we have multiple line of output
         List<String> output = new ArrayList<>();
-        for (String packageName : packages.keySet()) {
+        for (String packageName : sort(packages.keySet())) {
             output.add(packageName);
             Attrs attrs = ParameterAccess.attrs(packages, packageName);
             for (String key : attrs.keySet()) {
                 if (key.equals("uses:")) {
                     String value = attrs.get(key);
-                    output.add(String.format("\t%s=", key));
+                    output.add(String.format("%s%s=", tab(), key));
                     String[] split = value.split(",");
                     for (String splitPackage : split) {
-                        output.add(String.format("\t\t%s", splitPackage));
+                        output.add(String.format("%s%s", tabs(2), splitPackage));
                     }
 
                 } else {
-                    output.add(String.format("\t%s=%s", key, attrs.get(key)));
+                    output.add(String.format("%s%s=%s", tab(), key, attrs.get(key)));
                 }
             }
         }
         printPackageLines(fillIndent, packageType, output);
     }
 
-    private void printPackageLines(String fillIndent, String packageType, Collection<String> packagesOf) {
-        String packageIndent = "|      ";
+    private void printPackageLines(String fillIndent, String packageType, Collection<String> lines) {
 
-        log.info(format("%s%s%s", fillIndent, packageIndent,
-                format("%s (%d)", packageType, packagesOf.size())
+        log.info(format("%s%s%s", fillIndent, PACKAGE_INDENT,
+                format("%s (%d)", packageType, lines.size())
                 )
         );
-        for (String packageRef : packagesOf) {
-            log.info(format("%s%s%s", fillIndent, packageIndent,
-                    format("\t%s", packageRef)));
+        for (String packageRef : lines) {
+            log.info(format("%s%s%s", fillIndent, PACKAGE_INDENT,
+                    format("%s%s", tab(), packageRef)));
         }
-    }
-
-    public boolean endVisit(DependencyNode node) {
-        depth--;
-        return true;
     }
 
     private String fillIndent(DependencyNode node) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 1; i < depth; i++) {
+        for (int i = 1; i < depth(); i++) {
             sb.append(tokens.getFillIndent(isLast(node, i)));
         }
         return sb.toString();
@@ -152,7 +145,7 @@ class ReportingAsTreeVisitor
 
     private String nodeIndent(DependencyNode node) {
         StringBuilder sb = new StringBuilder();
-        if (depth > 0) {
+        if (depth() > 0) {
             sb.append(tokens.getNodeIndent(isLast(node)));
         }
         return sb.toString();
@@ -175,7 +168,7 @@ class ReportingAsTreeVisitor
     }
 
     private boolean isLast(DependencyNode node, int ancestorDepth) {
-        int distance = depth - ancestorDepth;
+        int distance = depth() - ancestorDepth;
 
         while (distance-- > 0) {
             node = node.getParent();

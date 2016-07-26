@@ -9,9 +9,7 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Component;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
@@ -21,6 +19,7 @@ import org.apache.maven.shared.dependency.graph.DependencyGraphBuilderException;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
 
 import java.io.File;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.lang.String.valueOf;
@@ -29,11 +28,9 @@ import static java.lang.String.valueOf;
  */
 @Mojo(
         name = "whence",
-        defaultPhase = LifecyclePhase.PREPARE_PACKAGE,
-        requiresDependencyResolution = ResolutionScope.COMPILE
+        requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME
 )
 public class AtlassianOsgiWhenceMojo extends AbstractMojo {
-    private static final String OUR_NAME = "Atlassian Whence Maven Plugin";
 
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
@@ -41,7 +38,7 @@ public class AtlassianOsgiWhenceMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project.build.outputDirectory}")
     private File outputDirectory;
 
-    @Parameter(defaultValue = "false", property = "verbose")
+    @Parameter(property = "verbose", defaultValue = "false")
     private Boolean verbose;
 
     @Parameter(property = "style", defaultValue = "tree")
@@ -54,11 +51,10 @@ public class AtlassianOsgiWhenceMojo extends AbstractMojo {
     private DependencyGraphBuilder dependencyGraphBuilder;
 
     public void execute() throws MojoExecutionException, MojoFailureException {
-        Log log = getLog();
+        MvnLog log = new MvnLog(getLog(), verbose);
 
         ProfilerSupport.waitForProfiler(log, 30000);
 
-        log.info("Starting " + OUR_NAME + "...");
         long then = System.currentTimeMillis();
 
         Reporter.ReportStyle reportStyle = toStyle(style);
@@ -91,9 +87,7 @@ public class AtlassianOsgiWhenceMojo extends AbstractMojo {
 
         try {
             return dependencyGraphBuilder.buildDependencyGraph(project,
-                    artifact -> isSuitableArtifact(
-                            artifactResolution.resolveArtifact(artifact)
-                    )
+                    artifact -> isSuitableArtifact(artifact, artifactResolution)
             );
         } catch (DependencyGraphBuilderException e) {
             throw new RuntimeException(e);
@@ -101,12 +95,15 @@ public class AtlassianOsgiWhenceMojo extends AbstractMojo {
     }
 
 
-    private boolean isSuitableArtifact(Artifact artifact) {
+    private boolean isSuitableArtifact(Artifact artifact, ArtifactResolution artifactResolution) {
         if (artifact.getArtifactHandler().isAddedToClasspath() &&
                 !Artifact.SCOPE_TEST.equals(artifact.getScope())) {
-            File file = artifact.getFile();
-            if (file != null) {
-                return true;
+            Optional<Artifact> artifactOpt = artifactResolution.resolveProjectArtifact(artifact);
+            if (artifactOpt.isPresent()) {
+                File file = artifactOpt.get().getFile();
+                if (file != null) {
+                    return true;
+                }
             }
             getLog().warn(
                     "File is not available for artifact " + artifact + " in project "

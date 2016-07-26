@@ -1,13 +1,13 @@
 package com.atlassian.maven.whence.profiling;
 
-import org.apache.maven.plugin.logging.Log;
+import com.atlassian.maven.whence.MvnLog;
 
 import java.io.File;
 
 public class ProfilerSupport {
 
-    public static void waitForProfiler(Log log, int waitMS) {
-        Long then = now();
+    public static void waitForProfiler(MvnLog log, int waitMS) {
+        long then = now();
         String homeDir = System.getProperty("user.home");
         File profilerFile = new File(homeDir, "profiler.wait");
         if (profilerFile.exists()) {
@@ -21,7 +21,7 @@ public class ProfilerSupport {
                 sleep(100);
                 long lastModified = profilerFile.lastModified();
                 if (elapsedTime(then) > waitMS) {
-                    log.warn(String.format("~/profiler.wait was not touched within within %d ms... Continuing on anyway.", waitMS));
+                    log.warn(String.format("~/profiler.wait was not touched within %d ms... Continuing on anyway.", waitMS));
                 }
                 if (lastModified > initialLastModified) {
                     break;
