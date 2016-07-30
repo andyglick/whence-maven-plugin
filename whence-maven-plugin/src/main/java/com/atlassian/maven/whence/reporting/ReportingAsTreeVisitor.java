@@ -5,8 +5,8 @@ import aQute.bnd.header.Parameters;
 import aQute.bnd.osgi.Descriptors;
 import aQute.bnd.osgi.Packages;
 import com.atlassian.maven.whence.MvnLog;
+import com.atlassian.maven.whence.data.CodeMapper;
 import com.atlassian.maven.whence.data.PackageInfo;
-import com.atlassian.maven.whence.data.PackageMapper;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
 
 import java.io.File;
@@ -58,9 +58,9 @@ class ReportingAsTreeVisitor
 
     private final Reporter.ReportDetail reportDetail;
     private final GraphTokens tokens;
-    private final PackageMapper packageMapper;
+    private final CodeMapper packageMapper;
 
-    ReportingAsTreeVisitor(MvnLog log, PackageMapper packageMapper, Reporter.ReportDetail reportDetail) {
+    ReportingAsTreeVisitor(MvnLog log, CodeMapper packageMapper, Reporter.ReportDetail reportDetail) {
         super(log);
         this.reportDetail = reportDetail;
         this.tokens = STANDARD_TOKENS;
@@ -80,13 +80,17 @@ class ReportingAsTreeVisitor
         log.info(format("%s%s%s", fillIndent, PACKAGE_INDENT,
                 format("%s%s", tab(), file)));
 
-        printParameters(fillIndent, info.getExports(), "exports");
 
         if (reportDetail == Reporter.ReportDetail.ALL) {
+            printParameters(fillIndent, info.getExports(), "exports");
             printParameters(fillIndent, info.getImports(), "imports");
 
+            printPackages(fillIndent, info.getApi(), "api");
             printPackages(fillIndent, info.getContains(), "contains");
             printPackages(fillIndent, info.getReferences(), "references");
+        } else {
+            printParameters(fillIndent, info.getExports(), "exports");
+            printPackages(fillIndent, info.getApi(), "api");
         }
         return true;
     }

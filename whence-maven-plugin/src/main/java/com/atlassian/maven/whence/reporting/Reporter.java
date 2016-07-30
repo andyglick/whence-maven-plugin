@@ -1,8 +1,7 @@
 package com.atlassian.maven.whence.reporting;
 
 import com.atlassian.maven.whence.MvnLog;
-import com.atlassian.maven.whence.data.PackageMapper;
-import org.apache.maven.plugin.logging.Log;
+import com.atlassian.maven.whence.data.CodeMapper;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
 
 public class Reporter {
@@ -16,7 +15,7 @@ public class Reporter {
         ALL
     }
 
-    public void report(MvnLog log, ReportStyle reportStyle, ReportDetail reportDetail, DependencyNode rootNode, PackageMapper packageMapper) {
+    public void report(MvnLog log, ReportStyle reportStyle, ReportDetail reportDetail, DependencyNode rootNode, CodeMapper packageMapper) {
         if (reportStyle == ReportStyle.TREE) {
             ReportingAsTreeVisitor visitor = new ReportingAsTreeVisitor(log, packageMapper, reportDetail);
             rootNode.accept(visitor);

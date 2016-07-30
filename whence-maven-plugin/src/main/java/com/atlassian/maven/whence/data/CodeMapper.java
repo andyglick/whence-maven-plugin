@@ -7,12 +7,12 @@ import java.util.Map;
 
 /**
  */
-public class PackageMapper {
+public class CodeMapper {
 
 
     private final Map<ArtifactKey, PackageInfo> artifactsToPackageInfo;
 
-    private PackageMapper(Map<ArtifactKey, PackageInfo> artifactsToPackageInfo) {
+    private CodeMapper(Map<ArtifactKey, PackageInfo> artifactsToPackageInfo) {
         this.artifactsToPackageInfo = artifactsToPackageInfo;
     }
 
@@ -38,8 +38,8 @@ public class PackageMapper {
             return this;
         }
 
-        public PackageMapper build() {
-            return new PackageMapper(artifactsToPackageInfo);
+        public CodeMapper build() {
+            return new CodeMapper(artifactsToPackageInfo);
         }
 
     }

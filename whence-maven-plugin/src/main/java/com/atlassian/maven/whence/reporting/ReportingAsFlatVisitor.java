@@ -5,8 +5,8 @@ import aQute.bnd.header.Parameters;
 import aQute.bnd.osgi.Descriptors;
 import aQute.bnd.osgi.Packages;
 import com.atlassian.maven.whence.MvnLog;
+import com.atlassian.maven.whence.data.CodeMapper;
 import com.atlassian.maven.whence.data.PackageInfo;
-import com.atlassian.maven.whence.data.PackageMapper;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
 
@@ -18,9 +18,9 @@ import static java.lang.String.format;
 class ReportingAsFlatVisitor
         extends ReportingVisitor {
     private final Reporter.ReportDetail reportDetail;
-    private final PackageMapper packageMapper;
+    private final CodeMapper packageMapper;
 
-    ReportingAsFlatVisitor(MvnLog log, PackageMapper packageMapper, Reporter.ReportDetail reportDetail) {
+    ReportingAsFlatVisitor(MvnLog log, CodeMapper packageMapper, Reporter.ReportDetail reportDetail) {
         super(log);
         this.reportDetail = reportDetail;
         this.packageMapper = packageMapper;
@@ -32,18 +32,23 @@ class ReportingAsFlatVisitor
 
         String gav = gav(node.getArtifact());
 
-        printParameters(gav, info.getExports(), "exports");
-
         if (reportDetail == Reporter.ReportDetail.ALL) {
-            printParameters(gav, info.getImports(), "imports");
+            printFlatParameters(gav, info.getExports(), "exports");
 
-            printPackages(gav, info.getContains(), "contains");
-            printPackages(gav, info.getReferences(), "references");
+            printFlatParameters(gav, info.getImports(), "imports");
+
+            printFlatPackages(gav, info.getApi(), "api");
+            printFlatPackages(gav, info.getContains(), "contains");
+            printFlatPackages(gav, info.getReferences(), "references");
+        } else {
+            printFlatParameters(gav, info.getExports(), "exports");
+
+            printFlatPackages(gav, info.getApi(), "api");
         }
         return true;
     }
 
-    private void printPackages(String gav, Packages packages, final String packageType) {
+    private void printFlatPackages(String gav, Packages packages, final String packageType) {
         Collection<String> packageNames = sort(packages.keySet()
                 .stream()
                 .map(Descriptors.PackageRef::getFQN)
@@ -52,7 +57,7 @@ class ReportingAsFlatVisitor
         printPackageLines(gav, packageType, packageNames);
     }
 
-    private void printParameters(String gav, Parameters packages, final String packageType) {
+    private void printFlatParameters(String gav, Parameters packages, final String packageType) {
         Collection<String> output = sort(packages.keySet()
                 .stream()
                 .map(packageName -> buildFlatAttrs(packages, packageName))

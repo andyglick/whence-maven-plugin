@@ -2,7 +2,9 @@ package com.atlassian.maven.whence.inspector;
 
 import aQute.bnd.header.Parameters;
 import aQute.bnd.osgi.Builder;
+import aQute.bnd.osgi.Descriptors;
 import aQute.bnd.osgi.Jar;
+import aQute.bnd.osgi.Packages;
 import com.atlassian.maven.whence.data.PackageInfo;
 import com.atlassian.maven.whence.reporting.Reporter;
 import org.apache.maven.artifact.Artifact;
@@ -13,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
@@ -29,17 +32,17 @@ class JarInspector {
         PackageInfo.Builder builder = PackageInfo.builder(artifact);
         try {
             Manifest manifest = jar.getManifest();
+            Builder bndBuilder = makeBndBuilder(jar, classPath);
+            bndBuilder.analyze();
             if (reportDetail == Reporter.ReportDetail.EXPORTS) {
-                // no need to do a BND analyze for exports/imports
                 return builder
                         .setImports(readImports(manifest))
                         .setExports(readExports(manifest))
+                        .setApi(readApi(bndBuilder))
                         .build();
             } else {
-                Builder bndBuilder = makeBndBuilder(jar, classPath);
-                bndBuilder.analyze();
-
                 return builder
+                        .setApi(readApi(bndBuilder))
                         .setContains(bndBuilder.getContained())
                         .setReferences(bndBuilder.getReferred())
                         .setImports(readImports(manifest))
@@ -71,6 +74,15 @@ class JarInspector {
                 .map(Manifest::getMainAttributes)
                 .map(attributes -> ofNullable(attributes.getValue(name)))
                 .flatMap(opString -> opString);
+    }
+
+    private Packages readApi(Builder bndBuilder) {
+        Packages packages = new Packages();
+        Map<Descriptors.PackageRef, List<Descriptors.PackageRef>> apiUses = bndBuilder.getAPIUses();
+        for (Descriptors.PackageRef packageRef : apiUses.keySet()) {
+            packages.put(packageRef);
+        }
+        return packages;
     }
 
     private Jar[] buildClassPath(DependencyNode depGraph, ArtifactResolution artifactResolution) {

@@ -1,10 +1,11 @@
 package com.atlassian.maven.whence;
 
-import com.atlassian.maven.whence.data.PackageMapper;
+import com.atlassian.maven.whence.data.CodeMapper;
 import com.atlassian.maven.whence.inspector.ArtifactResolution;
 import com.atlassian.maven.whence.inspector.InspectingVisitor;
 import com.atlassian.maven.whence.profiling.ProfilerSupport;
 import com.atlassian.maven.whence.reporting.Reporter;
+import com.google.common.base.Stopwatch;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -20,9 +21,11 @@ import org.apache.maven.shared.dependency.graph.DependencyNode;
 
 import java.io.File;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static java.lang.String.valueOf;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  */
@@ -55,7 +58,7 @@ public class AtlassianOsgiWhenceMojo extends AbstractMojo {
 
         ProfilerSupport.waitForProfiler(log, 30000);
 
-        long then = System.currentTimeMillis();
+        Stopwatch stopwatch = Stopwatch.createStarted();
 
         Reporter.ReportStyle reportStyle = toStyle(style);
         Reporter.ReportDetail reportDetail = toDetail(detail);
@@ -66,22 +69,17 @@ public class AtlassianOsgiWhenceMojo extends AbstractMojo {
         DependencyNode graph = getDependencyGraph(project, artifactResolution);
         log.info("");
         log.info("\tInspecting bytecode....");
-        PackageMapper mappings = new InspectingVisitor().inspect(graph, artifactResolution, reportDetail, log);
-        log.info(format("\tByte code inspection ran in %d ms.", timeSince(then)));
+        CodeMapper mappings = new InspectingVisitor().inspect(graph, artifactResolution, reportDetail, log);
+        log.info(format("\tByte code inspection ran in %d ms.", stopwatch.elapsed(MILLISECONDS)));
 
         log.info("");
         new Reporter()
                 .report(log, reportStyle, reportDetail, graph, mappings);
 
-        long ms = timeSince(then);
         log.info("");
-        log.info(format("\tFull analysis ran in %d ms.", ms));
+        log.info(format("\tFull analysis ran in %d ms.", stopwatch.elapsed(MILLISECONDS)));
     }
 
-
-    private long timeSince(long then) {
-        return System.currentTimeMillis() - then;
-    }
 
     private DependencyNode getDependencyGraph(MavenProject project, ArtifactResolution artifactResolution) {
 

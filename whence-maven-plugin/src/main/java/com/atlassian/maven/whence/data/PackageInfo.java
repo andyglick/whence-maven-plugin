@@ -9,13 +9,15 @@ public class PackageInfo {
     private final Artifact artifact;
     private final Parameters imports;
     private final Parameters exports;
+    private final Packages api;
     private final Packages contains;
     private final Packages references;
 
-    private PackageInfo(Artifact artifact, Parameters imports, Parameters exports, Packages contains, Packages references) {
+    private PackageInfo(Artifact artifact, Parameters imports, Parameters exports, Packages api, Packages contains, Packages references) {
         this.artifact = artifact;
         this.imports = imports;
         this.exports = exports;
+        this.api = api;
         this.contains = contains;
         this.references = references;
     }
@@ -36,6 +38,10 @@ public class PackageInfo {
         return imports;
     }
 
+    public Packages getApi() {
+        return api;
+    }
+
     public Packages getReferences() {
         return references;
     }
@@ -50,6 +56,7 @@ public class PackageInfo {
         Parameters exports = new Parameters();
         Packages contains = new Packages();
         Packages references = new Packages();
+        Packages api = new Packages();
 
         Builder(Artifact artifact) {
             this.artifact = artifact;
@@ -75,9 +82,16 @@ public class PackageInfo {
             return this;
         }
 
+        public Builder setApi(Packages packages) {
+            this.api = packages;
+            return this;
+        }
+
+
+
 
         public PackageInfo build() {
-            return new PackageInfo(artifact, imports, exports, contains, references);
+            return new PackageInfo(artifact, imports, exports, api, contains, references);
         }
     }
 }
