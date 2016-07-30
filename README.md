@@ -1,6 +1,6 @@
 This Maven plugin can help you answer the question "Where is this code coming from?"
 
-It uses [BND](http://aqute.biz/Code/bnd) under the covers to reverse engineer the maven dependencies of a project.
+It uses [BND](http://bnd.bndtools.org/) under the covers to reverse engineer the maven dependencies of a project.
 
 It has two report modes, a tree mode and a flat mode.
 
